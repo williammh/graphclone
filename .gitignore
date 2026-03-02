@@ -30,4 +30,5 @@ pyvenv.cfg
 *.swp
 
 /scrape-results/
+/wireframe/
 /lib64

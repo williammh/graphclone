@@ -9,6 +9,7 @@ from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 import json
+import config
 
 # Enable every available evasion and set realistic browser fingerprints.
 # chrome_runtime is False by default in the library — explicitly enable it.
@@ -33,11 +34,6 @@ STEALTH = Stealth(
     navigator_webdriver=True,
     error_prototype=True,
     sec_ch_ua=True,
-    webgl_vendor=True,
-    webgl_vendor_override="Intel Inc.",
-    webgl_renderer_override="Intel Iris OpenGL Engine",
-    init_scripts_only=False,
-    script_logging=False,
 )
 
 @dataclass
@@ -229,7 +225,7 @@ def canonicalize_url(
             # 2A: cardinality-based collapsing
             elif observed_last_segment_values is not None:
                 vals = observed_last_segment_values.get(key)
-                if vals and len(vals) >= SLUG_CARDINALITY_THRESHOLD:
+                if vals and len(vals) >= config.SLUG_CARDINALITY_THRESHOLD:
                     static = (observed_static_segments or {}).get(key, set())
                     if seg_raw not in static:
                         segments[i] = ":slug"
@@ -238,17 +234,7 @@ def canonicalize_url(
     return urlunparse((scheme, netloc, path, "", "", ""))
 
 
-# Runtime configuration
-CONCURRENT_WORKERS = 4
-MAX_DEPTH = 2
-HEADLESS = False
-# When a parent path produces more than this many distinct last-segment values,
-# treat the last segment as a dynamic slug and collapse it to ':slug'.
-SLUG_CARDINALITY_THRESHOLD = 5
-# Resource types and URL patterns to block for speed
-BLOCK_RESOURCE_TYPES = ("image", "font")
-BLOCK_URL_PATTERNS = ("google-analytics", "api.mixpanel", "doubleclick.net", "googlesyndication")
-
+# Runtime configuration moved to config.py
 
 def sanitize_segment(segment: str) -> str:
     # Keep alphanumerics, hyphens and underscores; replace others with '_'
@@ -294,36 +280,9 @@ async def crawl_and_screenshot(start_url):
 
     async with STEALTH.use_async(async_playwright()) as p:
         browser = await p.chromium.launch(
-            headless=HEADLESS,
-            args=[
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-accelerated-2d-canvas",
-                "--no-first-run",
-                "--no-zygote",
-                "--disable-infobars",
-                "--disable-background-networking",
-                "--disable-background-timer-throttling",
-                "--disable-backgrounding-occluded-windows",
-                "--disable-breakpad",
-                "--disable-client-side-phishing-detection",
-                "--disable-component-extensions-with-background-pages",
-                "--disable-default-apps",
-                "--disable-extensions",
-                "--disable-features=TranslateUI",
-                "--disable-hang-monitor",
-                "--disable-ipc-flooding-protection",
-                "--disable-popup-blocking",
-                "--disable-prompt-on-repost",
-                "--disable-renderer-backgrounding",
-                "--disable-sync",
-                "--force-color-profile=srgb",
-                "--metrics-recording-only",
-                "--safebrowsing-disable-auto-update",
-                "--password-store=basic",
-                "--use-mock-keychain",
-            ],
+            headless=config.HEADLESS,
+            # Select args based on STEALTH_MODE in config.py
+            args=(config.STEALTH_ARGS if config.STEALTH_MODE == "stealth" else config.STANDARD_ARGS),
             # Chromium's argument parser doesn't recognize a false value for --enable-automation
             ignore_default_args=["--enable-automation"],
         )
@@ -338,16 +297,32 @@ async def crawl_and_screenshot(start_url):
         # block images/fonts and known analytics for speed
         async def _route_handler(route):
             req = route.request
-            if req.resource_type in BLOCK_RESOURCE_TYPES:
+            if req.resource_type in config.BLOCK_RESOURCE_TYPES:
                 await route.abort()
                 return
-            for p in BLOCK_URL_PATTERNS:
+            for p in config.BLOCK_URL_PATTERNS:
                 if p in req.url:
                     await route.abort()
                     return
             await route.continue_()
 
         await context.route("**/*", _route_handler)
+
+        if config.WAIT_FOR_MANUAL_LOGIN:
+            canonical_start = canonicalize_url(start_url)
+            visited.add(canonical_start)
+            page = await context.new_page()
+            try:
+                await page.goto(start_url, timeout=8000)
+            except PlaywrightTimeoutError:
+                pass
+            try:
+                await page.wait_for_load_state('domcontentloaded', timeout=4000)
+            except PlaywrightTimeoutError:
+                pass
+            await dismiss_modals(page)
+            input("Press Enter after logging in...")
+            await page.close()
 
         # use an asyncio queue with worker tasks for concurrency
         # queue holds tuples of (requested_url, canonical_key, depth)
@@ -363,10 +338,18 @@ async def crawl_and_screenshot(start_url):
                 except asyncio.CancelledError:
                     break
                 async with visited_lock:
-                    if canonical_requested in visited:
+                    current_canonical = canonicalize_url(
+                        requested_url,
+                        observed_last_segment_values,
+                        observed_static_segments,
+                        segment_stats,
+                        forced_dynamic_parents,
+                    )
+                    if current_canonical in visited:
                         queue.task_done()
                         continue
-                    visited.add(canonical_requested)
+                    visited.add(current_canonical)
+                    canonical_requested = current_canonical
                 page = await context.new_page()
                 try:
                     print(f"Visiting {requested_url} (depth={depth})...")
@@ -455,10 +438,10 @@ async def crawl_and_screenshot(start_url):
                                     cardinality_set = observed_last_segment_values.setdefault(seg_key, set())
                                     static_set = observed_static_segments.setdefault(seg_key, set())
                                     # Lock in segments seen before threshold as static
-                                    if len(cardinality_set) < SLUG_CARDINALITY_THRESHOLD:
+                                    if len(cardinality_set) < config.SLUG_CARDINALITY_THRESHOLD:
                                         static_set.add(seg)
                                     # Cap to avoid unbounded growth
-                                    if len(cardinality_set) <= SLUG_CARDINALITY_THRESHOLD:
+                                    if len(cardinality_set) <= config.SLUG_CARDINALITY_THRESHOLD:
                                         cardinality_set.add(seg)
                                     # Prong 2B: nav/structural signals
                                     path_str = "/" + "/".join(segs[: i + 1])
@@ -481,10 +464,15 @@ async def crawl_and_screenshot(start_url):
                             except Exception:
                                 continue
                             if p.netloc == netloc_start and canon not in visited:
-                                if depth + 1 <= MAX_DEPTH:
+                                if depth + 1 <= config.MAX_DEPTH:
                                     await queue.put((full_url, canon, depth + 1))
 
+
                     out_dir = route_to_dir(start_url, canonical_final)
+                    
+                    if config.WAIT_FOR_MANUAL_LOGIN == True:
+                        out_dir += "_logged_in"
+
                     os.makedirs(out_dir, exist_ok=True)
                     
                     screenshot_path = os.path.join(out_dir, "screenshot.png")
@@ -519,7 +507,7 @@ async def crawl_and_screenshot(start_url):
                     queue.task_done()
 
         # start worker tasks
-        workers = [asyncio.create_task(worker()) for _ in range(CONCURRENT_WORKERS)]
+        workers = [asyncio.create_task(worker()) for _ in range(config.CONCURRENT_WORKERS)]
         await queue.join()
         for w in workers:
             w.cancel()
