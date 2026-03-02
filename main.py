@@ -267,6 +267,14 @@ def route_to_dir(start_url: str, page_url: str) -> str:
     else:
         segments = [sanitize_segment(seg) for seg in path.split('/') if seg]
         route = os.path.join(*segments)
+
+
+    if config.WAIT_FOR_LOGIN == True:
+        # used to distinguish user logged in site from scraped public version
+
+        return os.path.join('scrape-results', host + "_logged_in", route)
+
+
     return os.path.join('scrape-results', host, route)
 
 async def crawl_and_screenshot(start_url):
@@ -463,12 +471,8 @@ async def crawl_and_screenshot(start_url):
 
 
                     
-                    
-                    if config.WAIT_FOR_LOGIN == True:
-                        # used to distinguish user logged in site from scraped public version
-                        out_dir = route_to_dir(start_url + "_logged_in", canonical_final)
-                    else:
-                        out_dir = route_to_dir(start_url, canonical_final)
+              
+                    out_dir = route_to_dir(start_url, canonical_final)
 
 
                     os.makedirs(out_dir, exist_ok=True)
