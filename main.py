@@ -262,12 +262,12 @@ def sanitize_segment(segment: str) -> str:
 
 
 def route_to_dir(start_url: str, page_url: str) -> str:
-    """Return output directory for a page URL using Next.js-style routing.
+    """Return scrape-results directory for a page URL using Next.js-style routing.
 
     Examples:
-      https://example.com/         -> output/example.com/index/screenshot.png
-      https://example.com/about    -> output/example.com/about/screenshot.png
-      https://example.com/a/b      -> output/example.com/a/b/screenshot.png
+      https://example.com/         -> scrape-results/example.com/index/screenshot.png
+      https://example.com/about    -> scrape-results/example.com/about/screenshot.png
+      https://example.com/a/b      -> scrape-results/example.com/a/b/screenshot.png
     """
     parsed = urlparse(page_url)
     host = parsed.netloc or urlparse(start_url).netloc
@@ -277,10 +277,10 @@ def route_to_dir(start_url: str, page_url: str) -> str:
     else:
         segments = [sanitize_segment(seg) for seg in path.split('/') if seg]
         route = os.path.join(*segments)
-    return os.path.join('output', host, route)
+    return os.path.join('scrape-results', host, route)
 
 async def crawl_and_screenshot(start_url):
-    # screenshots are saved per-page under `output/<host>/<route>/screenshot.png`
+    # screenshots are saved per-page under `scrape-results/<host>/<route>/screenshot.png`
     netloc_start = urlparse(start_url).netloc
     visited: set[str] = set()
     # observed last-segment values keyed by (netloc, parent_tuple)

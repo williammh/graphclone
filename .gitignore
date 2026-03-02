@@ -29,5 +29,5 @@ pyvenv.cfg
 .idea/
 *.swp
 
-/output
+/scrape-results/
 /lib64
