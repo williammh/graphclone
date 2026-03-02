@@ -1,0 +1,33 @@
+# Common Python ignores
+# See https://docs.python.org/3/library/venv.html for venv recommendations
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+venv.bak/
+
+# Virtualenv created folders (project-specific; adjust if you actually track these)
+bin/
+include/
+lib/
+lib64/
+pyvenv.cfg
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+
+/output
+/lib64
