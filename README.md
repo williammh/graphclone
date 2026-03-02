@@ -45,10 +45,8 @@ Structured outputs feed directly into a Next.js TypeScript application `/wirefra
 ### ⚙️ Setup & Installation 
 
 1. Install Python Dependencies
-Bash
-Copy code
-pip install -r requirements.txt
-playwright install chrome
+`pip install -r requirements.txt`
+and `playwright install chrome`
 2. Setup Next.js Wireframe Builder
 Bash
 Copy code
@@ -63,13 +61,10 @@ python main.py <URL>
 In config.py:
 Python
 Copy code
-WAIT_FOR_LOGIN = True
-When enabled:
-A visible browser window opens.
-Manually authenticate.
-Return to the terminal and press Enter.
-Crawling continues using the authenticated session.
-Authenticated runs may optionally be labeled with a suffix (e.g., _logged_in) to distinguish them from public crawls.
+`WAIT_FOR_LOGIN = True` When enabled: A visible browser window opens. Log into your website as you normally would. Return to the terminal and press Enter. Crawling continues using the authenticated session.
+Authenticated runs are be labeled with a suffix in the `_logged_in` to distinguish them from public crawls.
+5. With the scrape results, feed into an LLM of your choice (`.github/agents/graphclone-builder.md` is recommended) to output to `/wireframe`
+6. Generate your Product requirements document with `python generate_prd.py`
 
 
 ### 🧪 Automated tests 
