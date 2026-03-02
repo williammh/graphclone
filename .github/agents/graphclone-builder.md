@@ -1,5 +1,5 @@
 ---
-name: DOMinatrix Wireframe Agent
+name: Graphclone Builder
 description: 'Dominate the DOM'
 model: 'Claude Opus 4.6'
 target: vscode

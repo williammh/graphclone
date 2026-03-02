@@ -1,5 +1,5 @@
 ---
-name: DOMinatrix
+name: Graphclone Scraper
 description: 'Dominate the DOM'
 model: 'Grok Code Fast 1'
 target: vscode

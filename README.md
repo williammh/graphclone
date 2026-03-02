@@ -1,13 +1,13 @@
 # Graphclone
 
 Graphclone is a structural website mapping tool that crawls complex site hierarchies and converts them into a normalized graph abstraction. The resulting structure feeds a TypeScript/React wireframe builder that generates visual documentation and exportable artifacts for engineering scoping and architectural analysis.
-graphclone is intended for authorized environments such as internal systems, owned properties, or sites where you have explicit permission to perform automated analysis.
+Graphclone is intended for authorized environments such as internal systems, owned properties, or sites where you have explicit permission to perform automated analysis.
 ## Features
 Structural Crawling
 Traverses nested directory structures and dynamic routing patterns while preventing infinite loops and redundant traversal.
 Authenticated Session Support
 Supports crawling authenticated environments.
-When WAIT_FOR_LOGIN is enabled, a visible browser session launches, allowing manual login before automated traversal continues using the authenticated context.
+When WAIT_FOR_LOGIN is enabled, a visible browser session launches, allowing manual login before automated traversal continues using the authenticated context to scrape gated content.
 URL Canonicalization
 Applies structural heuristics to normalize dynamic URLs (e.g., parameterized routes, infinite scrolling patterns, hashed segments) into reusable route templates. This prevents duplicate mapping and ensures stable structural output.
 ## Snapshot & Screenshot Capture
@@ -21,10 +21,10 @@ Structured outputs feed directly into a Next.js TypeScript application (/wirefra
 ## Architecture
 - Scraper (main.py)
 - Asynchronous Python
--Playwright-driven browser automation
+- Playwright-driven browser automation
 ## Output stored in /scrape-results
-Generates:
-- .html snapshots
+
+- HTML snapshots
 - screenshot.png
 - Route metadata
 - Wireframe Builder (/wireframe)
@@ -62,3 +62,7 @@ Manually authenticate.
 Return to the terminal and press Enter.
 Crawling continues using the authenticated session.
 Authenticated runs may optionally be labeled with a suffix (e.g., _logged_in) to distinguish them from public crawls.
+
+
+## Unit tests
+`python -m pytest tests -q`
