@@ -12,28 +12,30 @@ import json
 import config
 
 # Enable every available evasion and set realistic browser fingerprints.
-# chrome_runtime is False by default in the library — explicitly enable it.
+# We are running a full Chrome instance in non-headless mode. 
+# Using JS-based stealth injects proxies that trigger DataDome's deep JS profiling. 
+# Chrome already provides genuine signatures, so we let the browser be itself.
 STEALTH = Stealth(
-    chrome_app=True,
-    chrome_csi=True,
-    chrome_load_times=True,
-    chrome_runtime=True,
-    hairline=True,
-    iframe_content_window=True,
-    media_codecs=True,
-    navigator_hardware_concurrency=True,
-    navigator_languages=True,
-    navigator_languages_override=("en-US", "en"),
-    navigator_permissions=True,
-    navigator_platform=True,
-    navigator_platform_override="Win32",
-    navigator_plugins=True,
-    navigator_user_agent=True,
-    navigator_vendor=True,
-    navigator_vendor_override="Google Inc.",
+    # Only mask the Playwright/WebDriver automation flags
     navigator_webdriver=True,
-    error_prototype=True,
-    sec_ch_ua=True,
+    # Disable all other mock injections to preserve genuine Chrome object references
+    chrome_app=False,
+    chrome_csi=False,
+    chrome_load_times=False,
+    chrome_runtime=False,
+    hairline=False,
+    iframe_content_window=False,
+    media_codecs=False,
+    navigator_hardware_concurrency=False,
+    navigator_languages=False,
+    navigator_permissions=False,
+    navigator_platform=False,
+    navigator_plugins=False,
+    navigator_user_agent=False,
+    navigator_vendor=False,
+    error_prototype=False,
+    sec_ch_ua=False,
+    webgl_vendor=False,
 )
 
 @dataclass
@@ -280,6 +282,7 @@ async def crawl_and_screenshot(start_url):
 
     async with STEALTH.use_async(async_playwright()) as p:
         browser = await p.chromium.launch(
+            channel="chrome",
             headless=config.HEADLESS,
             # Select args based on STEALTH_MODE in config.py
             args=(config.STEALTH_ARGS if config.STEALTH_MODE == "stealth" else config.STANDARD_ARGS),
@@ -287,26 +290,11 @@ async def crawl_and_screenshot(start_url):
             ignore_default_args=["--enable-automation"],
         )
         context = await browser.new_context(
-            viewport={"width": 1920, "height": 1080},
+            no_viewport=True,
             locale="en-US",
             timezone_id="America/New_York",
             color_scheme="light",
-            device_scale_factor=1,
         )
-        
-        # block images/fonts and known analytics for speed
-        async def _route_handler(route):
-            req = route.request
-            if req.resource_type in config.BLOCK_RESOURCE_TYPES:
-                await route.abort()
-                return
-            for p in config.BLOCK_URL_PATTERNS:
-                if p in req.url:
-                    await route.abort()
-                    return
-            await route.continue_()
-
-        await context.route("**/*", _route_handler)
 
         if config.WAIT_FOR_MANUAL_LOGIN:
             canonical_start = canonicalize_url(start_url)

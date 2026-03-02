@@ -9,10 +9,6 @@ HEADLESS = False
 # treat the last segment as a dynamic slug and collapse it to ':slug'.
 SLUG_CARDINALITY_THRESHOLD = 5
 
-# Resource types and URL patterns to block for speed
-BLOCK_RESOURCE_TYPES = ()
-BLOCK_URL_PATTERNS = ("google-analytics", "api.mixpanel", "doubleclick.net", "googlesyndication")
-
 # Wait for manual login before crawling
 WAIT_FOR_MANUAL_LOGIN = True
 
@@ -25,18 +21,17 @@ STANDARD_ARGS = [
     "--no-sandbox",
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
-    # Keep these for performance
-    "--disable-accelerated-2d-canvas",
     "--no-first-run",
+    "--disable-blink-features=AutomationControlled",
 ]
 
 STEALTH_ARGS = [
     "--no-sandbox",
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
-    "--disable-accelerated-2d-canvas",
     "--no-first-run",
     "--no-zygote",
+    "--disable-blink-features=AutomationControlled",
     "--disable-infobars",
     "--disable-background-networking",
     "--disable-background-timer-throttling",
