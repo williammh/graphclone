@@ -1,36 +1,41 @@
-# Website Crawler and Screenshotter
+# Dominatrix
 
-This Python project uses Playwright to crawl a website starting from a given URL, dismiss common modals and dialogs, scroll to the bottom of each page, and take a screenshot of each page.
+Dominatrix is an advanced, stealthy production-grade website mapper. It crawls complex directory structures and distills them into a structural abstraction designed to feed a TypeScript React wireframe builder, which later exports comprehensive PDFs for software engineering teams and client project scoping.
 
-## Installation
+## Features
+- 🛡️ **Enterprise Bot Protection Bypass:** Effortlessly bypasses Cloudflare, DataDome, and other advanced anti-bot protections. Instead of relying on predictable JavaScript proxy injections that trigger deep profiling, Dominatrix leverages genuine Chrome signatures in non-headless mode with realistic, native browser fingerprints.
+- 🔐 **Authenticated Scraping Flow:** Supports crawling gated content that requires user authentication. Simply enable `WAIT_FOR_MANUAL_LOGIN` in the configuration, provide your credentials manually when the browser spawns, press `Enter`, and the crawler will seamlessly map the internal authenticated site structure with its automated workers.
+- 🧠 **Smart URL Canonicalization:** Employs structural heuristics, navigation cardinality, and schema analysis to map unpredictable dynamic URLs (e.g., infinite scrolling pages, user profiles, or raw hashes) into clean static templates, guaranteeing a complete site map without infinite looping.
+- 🖼️ **Wireframe & PDF Generation Pipeline:** Mapped structural data, HTML content, and screenshots feed directly into the modern Next.js TypeScript app (`/wireframe`), which visually reconstructs each page and its component breakdowns for contract scoping.
 
-1. Install Python dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+## Architecture
+- **Scraper (`main.py`)**: Asynchronous Python + Playwright stealth crawler generating `.html` and `screenshot.png` outputs structurally organized in the `/scrape-results` directory.
+- **Wireframe Builder (`/wireframe`)**: A complete Next.js / TypeScript project that consumes mapped components for rendering.
 
-2. Install Playwright browsers:
-   ```
-   playwright install
-   ```
+## Setup & Installation
+
+**1. Install Python Dependencies**
+```bash
+pip install -r requirements.txt
+playwright install chrome
+```
+
+**2. Setup Next.js Wireframe Builder**
+```bash
+cd wireframe
+npm install
+```
 
 ## Usage
 
-Run the script with a URL as an argument:
+**1. Run the Mapper**
+Run the core crawling script against your target start URL:
+```bash
+python main.py <URL>
 ```
-python main.py https://example.com
-```
 
-This will create a folder `output/example.com/screenshots` and save one screenshot per page visited.
+**2. Authentication (Optional)**
+Edit your `config.py` and set `WAIT_FOR_MANUAL_LOGIN = True`. 
+When initialized, a visible Chrome window will open. Manually log into your account, close out of any extraneous popups or 2FA, switch back to your terminal, and press **Enter** to hand off the authenticated context to the asynchronous crawlers. 
 
-## Features
-
-- Crawls all internal links on the website.
-- Dismisses common modals (e.g., cookie banners, close buttons).
-- Scrolls to the bottom of each page before taking a screenshot.
-- Saves screenshots in PNG format, numbered sequentially.
-
-## Troubleshooting
-
-- Ensure Playwright is installed and browsers are available.
-- If the script fails on certain pages, check the console output for errors.
+*(Output mapped results will seamlessly reflect an `_logged_in` route suffix so you can distinguish public/private structural runs).*
