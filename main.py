@@ -28,8 +28,10 @@ STEALTH = Stealth(
     media_codecs=False,
     navigator_hardware_concurrency=False,
     navigator_languages=False,
+    navigator_languages_override=None,
     navigator_permissions=False,
     navigator_platform=False,
+    navigator_platform_override=None,
     navigator_plugins=False,
     navigator_user_agent=False,
     navigator_vendor=False,
@@ -270,6 +272,8 @@ def route_to_dir(start_url: str, page_url: str) -> str:
 async def crawl_and_screenshot(start_url):
     # screenshots are saved per-page under `scrape-results/<host>/<route>/screenshot.png`
     netloc_start = urlparse(start_url).netloc
+    # Normalize for www. redirect comparisons (forexfactory.com == www.forexfactory.com)
+    netloc_start_base = netloc_start.replace("www.", "")
     visited: set[str] = set()
     # observed last-segment values keyed by (netloc, parent_tuple)
     observed_last_segment_values: dict = {}
@@ -296,21 +300,22 @@ async def crawl_and_screenshot(start_url):
             color_scheme="light",
         )
 
-        if config.WAIT_FOR_MANUAL_LOGIN:
-            canonical_start = canonicalize_url(start_url)
-            visited.add(canonical_start)
-            page = await context.new_page()
+        if config.WAIT_FOR_LOGIN:
+            login_page = await context.new_page()
             try:
-                await page.goto(start_url, timeout=8000)
+                await login_page.goto(start_url)
             except PlaywrightTimeoutError:
                 pass
             try:
-                await page.wait_for_load_state('domcontentloaded', timeout=4000)
+                await login_page.wait_for_load_state('domcontentloaded')
             except PlaywrightTimeoutError:
                 pass
-            await dismiss_modals(page)
+            await dismiss_modals(login_page)
             input("Press Enter after logging in...")
-            await page.close()
+            await login_page.close()
+
+
+
 
         # use an asyncio queue with worker tasks for concurrency
         # queue holds tuples of (requested_url, canonical_key, depth)
@@ -392,10 +397,11 @@ async def crawl_and_screenshot(start_url):
                     except Exception:
                         canonical_requested = requested_url
                     if canonical_final != canonical_requested:
-                        print(f"Canonicalized {requested_url} -> {canonical_final}; skipping.")
-                        continue
+                        print(f"Redirected {requested_url} -> {final_url}")
+                    canonical_requested = canonical_final
+                    
                     # If the page routed off-site, skip link extraction
-                    if urlparse(final_url).netloc != urlparse(start_url).netloc:
+                    if urlparse(final_url).netloc.replace("www.", "") != netloc_start_base:
                         print(f"Redirected off-site to {final_url}; skipping.")
                         continue
                     else:
@@ -451,15 +457,19 @@ async def crawl_and_screenshot(start_url):
                                 )
                             except Exception:
                                 continue
-                            if p.netloc == netloc_start and canon not in visited:
+                            if p.netloc.replace("www.", "") == netloc_start_base and canon not in visited:
                                 if depth + 1 <= config.MAX_DEPTH:
                                     await queue.put((full_url, canon, depth + 1))
 
 
-                    out_dir = route_to_dir(start_url, canonical_final)
                     
-                    if config.WAIT_FOR_MANUAL_LOGIN == True:
-                        out_dir += "_logged_in"
+                    
+                    if config.WAIT_FOR_LOGIN == True:
+                        # used to distinguish user logged in site from scraped public version
+                        out_dir = route_to_dir(start_url + "_logged_in", canonical_final)
+                    else:
+                        out_dir = route_to_dir(start_url, canonical_final)
+
 
                     os.makedirs(out_dir, exist_ok=True)
                     

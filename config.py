@@ -10,7 +10,7 @@ HEADLESS = False
 SLUG_CARDINALITY_THRESHOLD = 5
 
 # Wait for manual login before crawling
-WAIT_FOR_MANUAL_LOGIN = True
+WAIT_FOR_LOGIN = True
 
 # Stealth mode selection: "stealth" uses a larger set of flags; "standard" is smaller
  # "stealth" or "standard"
